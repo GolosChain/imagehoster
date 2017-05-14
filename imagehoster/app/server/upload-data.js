@@ -1,8 +1,5 @@
-
-import AWS from 'aws-sdk'
 import config from 'config'
 import Apis from 'shared/api_client/ApiInstances'
-
 import fs from 'fs'
 import {repLog10} from 'app/server/utils'
 import {exif, hasLocation, hasOrientation} from 'app/server/exif-utils'
@@ -12,12 +9,11 @@ import fileType from 'file-type'
 import multihash from 'multihashes'
 import base58 from 'bs58'
 import sharp from 'sharp'
+import {putToStorage} from 'app/server/disc-storage'
 
 const testKey = config.testKey ? PrivateKey.fromSeed('').toPublicKey() : null
 
-const {uploadBucket, protocol, host, port} = config
-
-const s3 = new AWS.S3()
+const {protocol, host, port} = config
 
 const router = require('koa-router')()
 
@@ -183,29 +179,25 @@ router.post('/:username/:signature', koaBody, function *() {
         }
     }
 
-    const params = {Bucket: uploadBucket, Key: key, Body: fbuffer};
-    if(mime) {
-        params.ContentType = mime
-    }
-
     yield new Promise(resolve => {
-        s3.putObject(params, (err/*, data*/) => {
-            if(err) {
-                console.log(err)
-                this.status = 400
-                this.statusText = `Error uploading ${key}.` 
-                this.body = {error: this.statusText}
-                resolve()
-                return
-            }
-            console.log(`Uploaded '${fname}' to s3://${uploadBucket}/${key}`);
-            const fnameUri = encodeURIComponent(fname)
+        const fnameUri = encodeURIComponent(fname)
+        putToStorage('uploads/', key, fbuffer)
+        .then((result) => {
+            console.log(`Uploaded '${fname}' to /uploads/${key}`);
             const url = protocol === 'https' ?
                 `https://${host}/${key}/${fnameUri}` :
                 `${protocol}://${host}:${port}/${key}/${fnameUri}`
 
             this.body = {url}
             resolve()
+        })
+        .catch((err) => {
+            console.log(err)
+            this.status = 400
+            this.statusText = `Error uploading ${key}.`
+            this.body = {error: this.statusText}
+            resolve()
+            return
         })
     })
 })
