@@ -1,6 +1,9 @@
 import {getFromStorage} from 'app/server/disc-storage'
 import {missing, getRemoteIp, limit} from 'app/server/utils-koa'
+import config from 'config'
 
+
+const {uploadBucket} = config
 const router = require('koa-router')()
 
 router.get('/:hash/:filename?', function *() {
@@ -14,7 +17,7 @@ router.get('/:hash/:filename?', function *() {
         const key = `${hash}`
 
         yield new Promise(resolve => {
-            getFromStorage('uploads/', key)
+            getFromStorage(uploadBucket, key)
             .then((data) => {
                 this.body = new Buffer(data.toString('binary'), 'binary')
                 resolve()

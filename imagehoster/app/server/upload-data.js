@@ -13,7 +13,7 @@ import {putToStorage} from 'app/server/disc-storage'
 
 const testKey = config.testKey ? PrivateKey.fromSeed('').toPublicKey() : null
 
-const {protocol, host, port} = config
+const {protocol, host, port, uploadBucket} = config
 
 const router = require('koa-router')()
 
@@ -181,9 +181,9 @@ router.post('/:username/:signature', koaBody, function *() {
 
     yield new Promise(resolve => {
         const fnameUri = encodeURIComponent(fname)
-        putToStorage('uploads/', key, fbuffer)
+        putToStorage(uploadBucket, key, fbuffer)
         .then((result) => {
-            console.log(`Uploaded '${fname}' to /uploads/${key}`);
+            console.log(`Uploaded '${fname}' to ${uploadBucket}${key}`);
             const url = protocol === 'https' ?
                 `https://${host}/${key}/${fnameUri}` :
                 `${protocol}://${host}:${port}/${key}/${fnameUri}`
