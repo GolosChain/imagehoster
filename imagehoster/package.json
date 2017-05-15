@@ -4,7 +4,7 @@
   "description": "",
   "main": "upload-data.js",
   "scripts": {
-    "start": "babel-node --presets es2015 ./app/server/server.js ",
+    "start": "NODE_PATH=. babel-node --presets es2015 ./app/server/server.js ",
     "test": "eslint app"
   },
   "author": "",
