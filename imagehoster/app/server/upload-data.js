@@ -181,7 +181,7 @@ router.post('/:username/:signature', koaBody, function *() {
 
     yield new Promise(resolve => {
         const fnameUri = encodeURIComponent(fname)
-        putToStorage(uploadBucket, key, fbuffer)
+        putToStorage(uploadBucket, key, fbuffer, fnameUri)
         .then((result) => {
             console.log(`Uploaded '${fname}' to ${uploadBucket}${key}`);
             const url = protocol === 'https' ?

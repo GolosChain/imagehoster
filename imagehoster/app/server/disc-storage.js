@@ -1,6 +1,6 @@
 import fs from 'fs'
 
-export function putToStorage(dir, key, buffer) {
+export function putToStorage(dir, key, buffer, fname) {
     return new Promise((resolve, reject) => {
 
         fs.writeFile(dir + key + '.bin', buffer, { encoding: null }, function (err) {
@@ -11,7 +11,7 @@ export function putToStorage(dir, key, buffer) {
             else resolve(buffer);
         });
 
-        fs.writeFile(dir + key + '.url', buffer, { encoding: 'utf-8' }, function (err) {
+        fs.writeFile(dir + key + '.url', fname, { encoding: 'utf-8' }, function (err) {
             if (err) {
                 console.log(err);
                 reject(err)
