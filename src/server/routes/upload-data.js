@@ -1,3 +1,5 @@
+const router = require('koa-router')();
+const koaBody = require('koa-body');
 const fs = require('fs');
 const fileType = require('file-type');
 const multihash = require('multihashes');
@@ -8,25 +10,27 @@ const config = require('../../config');
 // const { hash, Signature, PublicKey, PrivateKey } = require('../../shared/ecc');
 const { repLog10 } = require('../utils/utils');
 const { exif, hasLocation, hasOrientation } = require('../utils/exif-utils');
-const { missing, getRemoteIp, limit } = require('../utils/utils-koa');
+const { missing, getRemoteIp, limit } = require('../utils/utils');
 const { putToStorage } = require('../utils/disc-storage');
 
 const { protocol, host, port, uploadBucket } = config;
 
-const router = require('koa-router')();
-
-const koaBody = require('koa-body')({
+const bodyLimits = koaBody({
     multipart: true,
     formLimit: 20 * 1000 * 1024,
     // formidable: { uploadDir: '/tmp', }
 });
 
-router.post('/:username/:signature', koaBody, function*() {
+router.post('/:username/:signature', bodyLimits, function*() {
     const ip = getRemoteIp(this.req);
-    if (yield limit(this, 'uploadIp', ip, 'Uploads', 'request')) return;
 
-    if (missing(this, this.params, 'username')) return;
-    if (missing(this, this.params, 'signature')) return;
+    if (yield limit(this, 'uploadIp', ip, 'Uploads', 'request')) {
+        return;
+    }
+
+    if (missing(this, this.params, 'username') || missing(this, this.params, 'signature')) {
+        return;
+    }
 
     const { files, fields } = this.request.body;
 

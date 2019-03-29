@@ -5,7 +5,7 @@ const sharp = require('sharp');
 
 const config = require('../../config');
 const { sha1, mhashEncode } = require('../utils/hash');
-const { missing, statusError } = require('../utils/utils-koa');
+const { missing, statusError } = require('../utils/utils');
 const { waitFor, s3call, s3 } = require('../utils/amazon-bucket');
 
 const { uploadBucket, webBucket, thumbnailBucket } = config;
