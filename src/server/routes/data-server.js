@@ -4,37 +4,33 @@ const config = require('../../config');
 const { getFromStorage } = require('../utils/disc-storage');
 const { missing, getRemoteIp, limit } = require('../utils/utils');
 
-router.get('/:hash/:filename?', function*() {
+router.get('/files/:filename', function*() {
     try {
-        const ip = getRemoteIp(this.req);
+        // const ip = getRemoteIp(this.req);
+        //
+        // if (yield limit(this, 'downloadIp', ip, 'Downloads', 'request')) {
+        //     return;
+        // }
 
-        if (yield limit(this, 'downloadIp', ip, 'Downloads', 'request')) {
+        if (missing(this, this.params, 'filename')) {
             return;
         }
 
-        if (missing(this, this.params, 'hash')) {
-            return;
+        const { filename } = this.params;
+
+        try {
+            this.body = yield getFromStorage(config.uploadBucket, filename);
+        } catch (err) {
+            console.log(err);
+            this.status = 400;
+            this.statusText = `Error fetching ${filename}`;
+            this.body = { error: this.statusText };
         }
-
-        const { hash } = this.params;
-        const key = `${hash}`;
-
-        yield new Promise(resolve => {
-            getFromStorage(config.uploadBucket, key)
-                .then(data => {
-                    this.body = new Buffer(data.toString('binary'), 'binary');
-                    resolve();
-                })
-                .catch(err => {
-                    console.log(err);
-                    this.status = 400;
-                    this.statusText = `Error fetching ${key}.`;
-                    this.body = { error: this.statusText };
-                    resolve();
-                });
-        });
-    } catch (error) {
-        console.error(error);
+    } catch (err) {
+        console.error(err);
+        this.status = 500;
+        this.statusText = `Internal server error`;
+        this.body = { error: this.statusText };
     }
 });
 

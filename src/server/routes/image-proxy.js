@@ -9,11 +9,11 @@ const { missing, statusError } = require('../utils/utils');
 const { waitFor, s3call, s3 } = require('../utils/amazon-bucket');
 
 const { uploadBucket, webBucket, thumbnailBucket } = config;
-const TRACE = process.env.STEEMIT_IMAGEPROXY_TRACE || false;
+const TRACE = process.env.IMAGEPROXY_TRACE || false;
 
 // http://localhost:3234/640x480/https://cdn.meme.am/cache/instances/folder136/400x400/67577136.jpg
 // http://localhost:3234/0x0/https://cdn.meme.am/cache/instances/folder136/400x400/67577136.jpg
-router.get('/:width(\\d+)x:height(\\d+)/:url(.*)', function*() {
+router.get('/proxy/:width(\\d+)x:height(\\d+)/:url(.*)', function*() {
     if (
         missing(this, this.params, 'width') ||
         missing(this, this.params, 'height') ||

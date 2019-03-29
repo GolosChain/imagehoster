@@ -10,7 +10,7 @@ See also: `./config/index.js`
 
 Enable the TEST key in development mode only.  The examples below are signed using this test key.
  
-> export STEEMIT_UPLOAD_TEST_KEY=true
+> export UPLOAD_TEST_KEY=true
 > . ./env_prod.sh
 > npm start
 
