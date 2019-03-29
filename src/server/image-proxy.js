@@ -2,7 +2,7 @@ const fileType = require('file-type');
 const request = require('request');
 const sharp = require('sharp');
 
-const config = require('../../config');
+const config = require('../config');
 const { sha1, mhashEncode } = require('./hash');
 const { missing, statusError } = require('./utils-koa');
 const { waitFor, s3call, s3 } = require('./amazon-bucket');

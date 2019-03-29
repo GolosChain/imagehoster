@@ -1,4 +1,4 @@
-const config = require('../../config');
+const config = require('../config');
 const { getFromStorage } = require('./disc-storage');
 const { missing, getRemoteIp, limit } = require('./utils-koa');
 

@@ -1,8 +1,8 @@
 const Koa = require('koa');
 const cors = require('koa-cors');
 
-const config = require('../../config');
-const Apis = require('../../shared/api_client/ApiInstances');
+const config = require('../config');
+const Apis = require('../shared/api_client/ApiInstances');
 const healthCheck = require('./health-check');
 const uploadData = require('./upload-data');
 const imageProxy = require('./image-proxy');

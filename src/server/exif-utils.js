@@ -1,4 +1,4 @@
-const ExifImage = require('exif').ExifImage;
+const ExifImage = require('exif/lib/exif').ExifImage;
 
 function* exif(buffer) {
     return new Promise((resolve, reject) => {

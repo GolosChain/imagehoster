@@ -4,15 +4,13 @@ const multihash = require('multihashes');
 const base58 = require('bs58');
 const sharp = require('sharp');
 
-const config = require('../../config');
-const Apis = require('../../shared/api_client/ApiInstances');
-const { hash, Signature, PublicKey, PrivateKey } = require('../../shared/ecc');
+const config = require('../config');
+const Apis = require('../shared/api_client/ApiInstances');
+// const { hash, Signature, PublicKey, PrivateKey } = require('../../shared/ecc');
 const { repLog10 } = require('./utils');
 const { exif, hasLocation, hasOrientation } = require('./exif-utils');
 const { missing, getRemoteIp, limit } = require('./utils-koa');
 const { putToStorage } = require('./disc-storage');
-
-const testKey = config.testKey ? PrivateKey.fromSeed('').toPublicKey() : null;
 
 const { protocol, host, port, uploadBucket } = config;
 
@@ -143,6 +141,8 @@ router.post('/:username/:signature', koaBody, function*() {
 
     let userVerified = false;
     if (posting) {
+        const testKey = config.testKey ? PrivateKey.fromSeed('').toPublicKey() : null;
+
         if (
             !sig.verifyHash(shaVerify, posting) &&
             !(testKey && sig.verifyHash(shaVerify, testKey))

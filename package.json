@@ -4,7 +4,7 @@
   "description": "",
   "main": "upload-data.js",
   "scripts": {
-    "start": "node src/app/server/server.js ",
+    "start": "node src/server/index.js ",
     "test": "eslint src/app"
   },
   "author": "",
