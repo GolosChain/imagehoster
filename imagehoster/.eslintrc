@@ -20,11 +20,11 @@
         "no-unreachable": ["warn"],
         "no-shadow": ["warn"],
         "no-constant-condition": ["warn"],
-        "no-shadow-restricted-names": ["off"], # warn misfired on 'import' statements
+        "no-shadow-restricted-names": ["off"]
     },
     "env": {
         "browser": true,
         "node": true,
-        "es6": true,
+        "es6": true
     }
 }

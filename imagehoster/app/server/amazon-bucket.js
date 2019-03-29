@@ -1,34 +1,37 @@
+const AWS = require('aws-sdk');
 
-import AWS from 'aws-sdk'
+const s3 = new AWS.S3();
 
-export const s3 = new AWS.S3()
-
-export function s3call(method, params) {
+function s3call(method, params) {
     return new Promise((resolve, reject) => {
         s3[method](params, function(err, data) {
-            if(err && (err.code === 'NotFound' || err.code === 'NoSuchKey')) {
-                resolve(null)
+            if (err && (err.code === 'NotFound' || err.code === 'NoSuchKey')) {
+                resolve(null);
             } else if (err) {
-                console.error(method, params, err)
-                reject(err)
-            }
-            else resolve(data);
+                console.error(method, params, err);
+                reject(err);
+            } else resolve(data);
         });
-    })
+    });
 }
 
 /**
     @arg {string} what = objectExists, ..
     @arg {object} params = {Bucket, Key}
 */
-export function waitFor(method, params/*, responseHeaders*/) {
+function waitFor(method, params /*, responseHeaders*/) {
     return new Promise((resolve, reject) => {
         s3.waitFor(method, params, function(err, data) {
             if (err) {
-                console.error(err)
-                reject(err)
-            }
-            else resolve(data);
+                console.error(err);
+                reject(err);
+            } else resolve(data);
         });
-    })
+    });
 }
+
+module.exports = {
+    s3,
+    s3call,
+    waitFor,
+};

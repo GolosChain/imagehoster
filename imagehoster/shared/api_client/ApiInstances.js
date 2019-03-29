@@ -1,17 +1,16 @@
-import WebSocketClient from './WebSocketClient';
-import { List } from 'immutable'
-import { hash } from 'shared/ecc'
-import config from 'config'
+const { List } = require('immutable');
 
-export const apiNames = [
-    { local: 'db_api', remote: 'database_api'},
-    { local: 'network', remote: 'network_broadcast_api'},
-    { local: 'follow', remote: 'follow_api'},
-    { local: 'market', remote: 'market_history_api'},
-]
+const config = require('../../config');
+const WebSocketClient = require('./WebSocketClient');
+
+const apiNames = [
+    { local: 'db_api', remote: 'database_api' },
+    { local: 'network', remote: 'network_broadcast_api' },
+    { local: 'follow', remote: 'follow_api' },
+    { local: 'market', remote: 'market_history_api' },
+];
 
 class SteemApi {
-
     /**
         @arg {WebSocketClient} ws_rpc
         @arg {string} api_name like 'database'
@@ -26,7 +25,7 @@ class SteemApi {
         @return {Promise}
     */
     init() {
-        if(this.api_id != null) return Promise.resolve(this)
+        if (this.api_id != null) return Promise.resolve(this);
         return this.ws_rpc.call(1, 'get_api_by_name', [this.api_name]).then(response => {
             this.api_id = response;
             return this;
@@ -42,7 +41,7 @@ class SteemApi {
         return this.init().then(() => {
             console.log('SteemApi exec', this.api_id, method, '(', params, ')');
             return this.ws_rpc.call(this.api_id, method, params, callback);
-        })
+        });
     }
 }
 
@@ -66,11 +65,11 @@ class Apis {
 
     login() {
         this.init_promise = this.ws_rpc.call(1, 'login', ['', '']).then(() => {
-            const promises = []
+            const promises = [];
             for (const name of apiNames) {
                 this[name.local] = new SteemApi(this.ws_rpc, name.remote);
             }
-            return Promise.all(promises)
+            return Promise.all(promises);
         });
     }
 
@@ -98,34 +97,45 @@ class Apis {
 
 let apis_instance;
 
-export default {
-    instance(update_rpc_connection_status_callback, update_rpc_request_status_callback) {
-        if (!apis_instance) {
-            apis_instance = new Apis();
-            apis_instance.setRpcConnectionStatusCallback(update_rpc_connection_status_callback);
-            apis_instance.setRpcRequestStatusCallback(update_rpc_request_status_callback);
-            apis_instance.connect();
+function instance(update_rpc_connection_status_callback, update_rpc_request_status_callback) {
+    if (!apis_instance) {
+        apis_instance = new Apis();
+        apis_instance.setRpcConnectionStatusCallback(update_rpc_connection_status_callback);
+        apis_instance.setRpcRequestStatusCallback(update_rpc_request_status_callback);
+        apis_instance.connect();
 
-            // usage: Apis.db_api("get_state", "/")
-            for (const name of apiNames) {
-                this[name.local] = (method, ...args) => {
-                    const inst = apis_instance[name.local]
-                    if(!inst)
-                        throw new Error("Missing API instance (connection problem?): " + name.remote)
+        // usage: Apis.db_api("get_state", "/")
+        for (const name of apiNames) {
+            this[name.local] = (method, ...args) => {
+                const inst = apis_instance[name.local];
+                if (!inst)
+                    throw new Error('Missing API instance (connection problem?): ' + name.remote);
 
-                    return inst.exec(method, toStrings(args))
-                }
-            }
+                return inst.exec(method, toStrings(args));
+            };
         }
-        return apis_instance;
-    },
-};
+    }
+    return apis_instance;
+}
 
-const toStrings = array => List(array)
-    .reduce((r, p) => r.push(
-        Buffer.isBuffer(p) ? p.toString("hex") :
-        p.high !== undefined ? p.toString() : // Long.toString()
-        p.Q !== undefined ? p.toString() : // PublicKey.toString()
-        p
-    ), List())
-    .toJS()
+const toStrings = array =>
+    List(array)
+        .reduce(
+            (r, p) =>
+                r.push(
+                    Buffer.isBuffer(p)
+                        ? p.toString('hex')
+                        : p.high !== undefined
+                        ? p.toString() // Long.toString()
+                        : p.Q !== undefined
+                        ? p.toString() // PublicKey.toString()
+                        : p
+                ),
+            List()
+        )
+        .toJS();
+
+module.exports = {
+    apiNames,
+    instance,
+};

@@ -92,16 +92,15 @@
  * - The maximum time in milliseconds to wait for a connection to succeed before closing and retrying. Accepts integer. Default: 2000.
  *
  */
-(function (global, factory) {
+(function(global, factory) {
     if (typeof define === 'function' && define.amd) {
         define([], factory);
-    } else if (typeof module !== 'undefined' && module.exports){
+    } else if (typeof module !== 'undefined' && module.exports) {
         module.exports = factory();
     } else {
         global.ReconnectingWebSocket = factory();
     }
-})(this, function () {
-
+})(this, function() {
     //if (!('WebSocket' in window)) {
     //    return;
     //}
@@ -109,10 +108,8 @@
     var WebSocket;
 
     function ReconnectingWebSocket(url, protocols, options) {
-
         // Default settings
         var settings = {
-
             /** Whether this instance should log debug messages. */
             debug: false,
 
@@ -136,9 +133,11 @@
             binaryType: 'arraybuffer',
 
             /** Don't reconnect if idle (no user activity after idleTreshold), pass 0 to always reconnect **/
-            idleTreshold: 0
+            idleTreshold: 0,
+        };
+        if (!options) {
+            options = {};
         }
-        if (!options) { options = {}; }
 
         WebSocket = options.WebSocket;
         ReconnectingWebSocket.CONNECTING = WebSocket.CONNECTING;
@@ -195,17 +194,26 @@
             dispatchEvent: function(event) {
                 var handler = handlers[event.name];
                 if (handler) handler(event);
-            }
+            },
         }; //document.createElement('div');
 
         // Wire up "on*" properties as event handlers
 
-        eventTarget.addEventListener('open',       function(event) {
-            self.onopen(event); });
-        eventTarget.addEventListener('close',      function(event) { self.onclose(event); });
-        eventTarget.addEventListener('connecting', function(event) { self.onconnecting(event); });
-        eventTarget.addEventListener('message',    function(event) { self.onmessage(event); });
-        eventTarget.addEventListener('error',      function(event) { self.onerror(event); });
+        eventTarget.addEventListener('open', function(event) {
+            self.onopen(event);
+        });
+        eventTarget.addEventListener('close', function(event) {
+            self.onclose(event);
+        });
+        eventTarget.addEventListener('connecting', function(event) {
+            self.onconnecting(event);
+        });
+        eventTarget.addEventListener('message', function(event) {
+            self.onmessage(event);
+        });
+        eventTarget.addEventListener('error', function(event) {
+            self.onerror(event);
+        });
 
         // Expose the API required by EventTarget
 
@@ -225,23 +233,18 @@
          * @param args Object an optional object that the event will use
          */
         function generateEvent(s, args) {
-        	//var evt = document.createEvent("CustomEvent");
-        	//evt.initCustomEvent(s, false, false, args);
-        	//return evt;
-            return {name: s};
-        };
+            //var evt = document.createEvent("CustomEvent");
+            //evt.initCustomEvent(s, false, false, args);
+            //return evt;
+            return { name: s };
+        }
 
         self.pendingReconnect = false;
         self.idleSince = new Date();
 
         if (this.idleTreshold) {
             if (typeof document !== 'undefined') {
-                document.onkeypress
-                    = document.onmousemove
-                    = document.onclick
-                    = document.onscroll
-                    = document.touchstart
-                    = function () {
+                document.onkeypress = document.onmousemove = document.onclick = document.onscroll = document.touchstart = function() {
                     self.idleSince = new Date();
                     if (self.pendingReconnect) {
                         self.pendingReconnect = false;
@@ -251,19 +254,28 @@
             }
         }
 
-        this.reconnect = function () {
-            var timeout = self.reconnectInterval * Math.pow(self.reconnectDecay, self.reconnectAttempts);
+        this.reconnect = function() {
+            var timeout =
+                self.reconnectInterval * Math.pow(self.reconnectDecay, self.reconnectAttempts);
             timeout = timeout > self.maxReconnectInterval ? self.maxReconnectInterval : timeout;
-            console.log('WebSocket: will try to reconnect in ' + parseInt(timeout/1000) + ' sec, attempt #' + (self.reconnectAttempts + 1));
-            setTimeout(function () {
+            console.log(
+                'WebSocket: will try to reconnect in ' +
+                    parseInt(timeout / 1000) +
+                    ' sec, attempt #' +
+                    (self.reconnectAttempts + 1)
+            );
+            setTimeout(function() {
                 self.reconnectAttempts++;
                 self.open(true);
             }, timeout);
-        }
+        };
 
-        this.open = function (reconnectAttempt) {
+        this.open = function(reconnectAttempt) {
             if (reconnectAttempt) {
-                if (this.maxReconnectAttempts && this.reconnectAttempts > this.maxReconnectAttempts) {
+                if (
+                    this.maxReconnectAttempts &&
+                    this.reconnectAttempts > this.maxReconnectAttempts
+                ) {
                     return;
                 }
             } else {
@@ -277,7 +289,11 @@
             }
 
             console.log('connecting to', surl);
-            ws = process.env.BROWSER ? new WebSocket(surl) : new WebSocket(surl, protocols || [], null, null, null, {maxReceivedFrameSize: 0x300000});
+            ws = process.env.BROWSER
+                ? new WebSocket(surl)
+                : new WebSocket(surl, protocols || [], null, null, null, {
+                      maxReceivedFrameSize: 0x300000,
+                  });
             ws.binaryType = this.binaryType;
 
             if (self.debug || ReconnectingWebSocket.debugAll) {
@@ -309,8 +325,13 @@
             };
 
             ws.onclose = function(event) {
-                if(event.code !== 1000)
-                    console.log('WARNING! ws connection', surl, 'closed: ', event && event.reason ? event.reason : event);
+                if (event.code !== 1000)
+                    console.log(
+                        'WARNING! ws connection',
+                        surl,
+                        'closed: ',
+                        event && event.reason ? event.reason : event
+                    );
                 clearTimeout(timeout);
                 ws = null;
                 if (forcedClose) {
@@ -330,7 +351,7 @@
                         eventTarget.dispatchEvent(generateEvent('close'));
                     }
 
-                    if (!self.idleTreshold || ((new Date() - self.idleSince) < self.idleTreshold)) {
+                    if (!self.idleTreshold || new Date() - self.idleSince < self.idleTreshold) {
                         self.reconnect();
                     } else {
                         console.debug('idle - will reconnect later');
@@ -352,7 +373,7 @@
                 }
                 eventTarget.dispatchEvent(generateEvent(event));
             };
-        }
+        };
 
         // Whether or not to create a websocket upon instantiation
         if (this.automaticOpen == true) {

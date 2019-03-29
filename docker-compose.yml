@@ -1,13 +1,12 @@
 version: '2'
 
 services:
-
   ttdatastore:
     image: ttdatastore
     build:
       context: ./ttdatastore
     ports:
-      - "3301:3301"
+      - '3301:3301'
     volumes:
       - ./data:/var/lib/tarantool
       - ./:/home/src
@@ -17,7 +16,7 @@ services:
     build:
       context: ./imagehoster
     ports:
-      - "80"
+      - '80'
     environment:
       - STEEMIT_UPLOAD_STEEMD_WEBSOCKET
       - STEEMIT_UPLOAD_AWS_KEY_ID

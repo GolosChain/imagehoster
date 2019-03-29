@@ -1,21 +1,22 @@
-import Koa from 'koa';
-import cors from 'koa-cors'
-import healthCheck from './health-check'
-import uploadData from './upload-data'
-import imageProxy from './image-proxy'
-import dataServer from './data-server'
-import config from 'config'
-import Apis from 'shared/api_client/ApiInstances'
+const Koa = require('koa');
+const cors = require('koa-cors');
 
-Apis.instance().init()
+const config = require('../../config');
+const Apis = require('../../shared/api_client/ApiInstances');
+const healthCheck = require('./health-check');
+const uploadData = require('./upload-data');
+const imageProxy = require('./image-proxy');
+const dataServer = require('./data-server');
 
-const app = new Koa()
+Apis.instance().init();
 
-app.use(cors())
-app.use(healthCheck)
-app.use(dataServer)
-app.use(uploadData)
-app.use(imageProxy)
+const app = new Koa();
 
-app.listen(config.port)
-console.log(`Application started on port ${config.port}`)
+app.use(cors());
+app.use(healthCheck);
+app.use(dataServer);
+app.use(uploadData);
+app.use(imageProxy);
+
+app.listen(config.port);
+console.log(`Application started on port ${config.port}`);

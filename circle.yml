@@ -1,12 +1,12 @@
 machine:
-    services:
-        - docker
+  services:
+    - docker
 
 dependencies:
-    override:
-        - echo "Ignore CircleCI detected dependencies"
+  override:
+    - echo "Ignore CircleCI detected dependencies"
 
 test:
-    override:
-        - docker build -t steemit/imagehoster ./imagehoster
-        - docker build -t steemit/imagehostertt ./ttdatastore
+  override:
+    - docker build -t steemit/imagehoster ./imagehoster
+    - docker build -t steemit/imagehostertt ./ttdatastore
