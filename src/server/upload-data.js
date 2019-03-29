@@ -5,7 +5,6 @@ const base58 = require('bs58');
 const sharp = require('sharp');
 
 const config = require('../config');
-const Apis = require('../shared/api_client/ApiInstances');
 // const { hash, Signature, PublicKey, PrivateKey } = require('../../shared/ecc');
 const { repLog10 } = require('./utils');
 const { exif, hasLocation, hasOrientation } = require('./exif-utils');
@@ -51,6 +50,7 @@ router.post('/:username/:signature', koaBody, function*() {
     const { username } = this.params;
     let posting;
     try {
+        // TODO Apis removed
         const [account] = yield Apis.db_api('get_accounts', [this.params.username]);
         if (!account) {
             this.status = 400;
