@@ -22,15 +22,16 @@ const bodyLimits = koaBody({
 });
 
 router.post('/:username/:signature', bodyLimits, function*() {
-    const ip = getRemoteIp(this.req);
+    // TODO: Temp disable limits
+    // const ip = getRemoteIp(this.req);
+    //
+    // if (yield limit(this, 'uploadIp', ip, 'Uploads', 'request')) {
+    //     return;
+    // }
 
-    if (yield limit(this, 'uploadIp', ip, 'Uploads', 'request')) {
-        return;
-    }
-
-    if (missing(this, this.params, 'username') || missing(this, this.params, 'signature')) {
-        return;
-    }
+    // if (missing(this, this.params, 'username') || missing(this, this.params, 'signature')) {
+    //     return;
+    // }
 
     const { files, fields } = this.request.body;
 
@@ -44,6 +45,7 @@ router.post('/:username/:signature', bodyLimits, function*() {
 
     const { signature } = this.params;
     const sig = parseSig(signature);
+
     if (!sig) {
         this.status = 400;
         this.statusText = `Unable to parse signature (expecting HEX data).`;
@@ -53,54 +55,6 @@ router.post('/:username/:signature', bodyLimits, function*() {
 
     const { username } = this.params;
     let posting;
-
-    try {
-        // TODO Apis removed
-        const [account] = yield Apis.db_api('get_accounts', [this.params.username]);
-
-        if (!account) {
-            this.status = 400;
-            this.statusText = `Account '${this.params.username}' is not found on the blockchain.`;
-            this.body = { error: this.statusText };
-            return;
-        }
-        const {
-            posting: { key_auths },
-            weight_threshold,
-            reputation,
-        } = account;
-
-        const rep = repLog10(reputation);
-
-        if (rep < config.uploadIpLimit.minRep) {
-            this.status = 400;
-            this.statusText = `Your reputation must be at least ${
-                config.uploadIpLimit.minRep
-            } to upload.`;
-
-            this.body = { error: this.statusText };
-
-            console.log(
-                `Upload by '${username}' blocked: reputation ${rep} < ${
-                    config.uploadIpLimit.minRep
-                }`
-            );
-            return;
-        }
-
-        const [[posting_pubkey, weight]] = key_auths;
-
-        if (weight < weight_threshold) {
-            this.status = 400;
-            this.statusText = `User ${username} has an unsupported posting key configuration.`;
-            this.body = { error: this.statusText };
-            return;
-        }
-
-        posting = PublicKey.fromString(posting_pubkey);
-    } catch (error) {
-        console.error(error);
-    }
 
     let fbuffer, fname;
 
@@ -144,7 +98,7 @@ router.post('/:username/:signature', bodyLimits, function*() {
 
     if (!/^image\/(gif|jpeg|png)$/.test(mime)) {
         this.status = 400;
-        this.statusText = `Please upload only images.`;
+        this.statusText = 'Please upload only images.';
         this.body = { error: this.statusText };
         console.log(`Upload rejected, file: ${fname} mime: ${mime}`);
         return;
@@ -163,7 +117,7 @@ router.post('/:username/:signature', bodyLimits, function*() {
             !(testKey && sig.verifyHash(shaVerify, testKey))
         ) {
             this.status = 400;
-            this.statusText = `Signature did not verify.`;
+            this.statusText = 'Signature did not verify.';
             this.body = { error: this.statusText };
             return;
         }
