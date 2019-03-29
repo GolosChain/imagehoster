@@ -5,4 +5,4 @@ npm-debug.log
 bundle.js
 env_dev.sh
 env_prod.sh
-src/uploads/*
+uploads

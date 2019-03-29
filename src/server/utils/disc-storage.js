@@ -1,38 +1,29 @@
-const fs = require('fs');
+const fs = require('fs-extra');
+const path = require('path');
 
-function putToStorage(dir, key, buffer, fname) {
-    return new Promise((resolve, reject) => {
-        fs.writeFile(dir + key + '.bin', buffer, { encoding: null }, function(err) {
-            if (err) {
-                console.warn(err);
-                reject(err);
-            } else {
-                resolve(buffer);
-            }
-        });
+async function putToStorage(dir, key, buffer) {
+    const subDir = path.join(dir, key.substr(0, 2));
+    const subInnerDir = path.join(subDir, key.substr(0, 4));
 
-        fs.writeFile(dir + key + '.url', fname, { encoding: 'utf-8' }, function(err) {
-            if (err) {
-                console.warn(err);
-                reject(err);
-            } else {
-                resolve(buffer);
-            }
-        });
-    });
+    if (!(await fs.exists(subDir))) {
+        await fs.mkdir(subDir, 0o744);
+    }
+
+    if (!(await fs.exists(subInnerDir))) {
+        await fs.mkdir(subInnerDir, 0o744);
+    }
+
+    const filePath = path.join(subInnerDir, key);
+
+    if (await fs.exists(filePath)) {
+        throw new Error('Filename collision');
+    }
+
+    await fs.writeFile(filePath, buffer);
 }
 
-function getFromStorage(dir, key) {
-    return new Promise((resolve, reject) => {
-        fs.readFile(dir + key + '.bin', function(err, data) {
-            if (err) {
-                console.warn(err);
-                reject(err);
-            } else {
-                resolve(data);
-            }
-        });
-    });
+async function getFromStorage(dir, key) {
+    return await fs.readFile(dir + key + '.bin');
 }
 
 module.exports = {

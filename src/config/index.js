@@ -1,30 +1,23 @@
 const toBoolean = s => (s == null || s.trim() === '' ? false : JSON.parse(s));
 
-const isDev = process.env.NODE_ENV !== 'production';
-
 const config = {
-    ws_connection_server: process.env.STEEMIT_UPLOAD_STEEMD_WEBSOCKET || 'wss://ws.golos.io',
-    // When protocol === 'https' a default port url is used (ignores STEEMIT_UPLOAD_HTTP_PORT)
-    protocol: process.env.STEEMIT_UPLOAD_HTTP_PROTOCOL || 'https',
-    host:
-        process.env.STEEMIT_UPLOAD_HTTP_HOST ||
-        (isDev ? 'golosdevimages.local' : 'images.golos.io'),
-    port: process.env.STEEMIT_UPLOAD_HTTP_PORT || 3234,
+    // When protocol === 'https' a default port url is used (ignores UPLOAD_PORT)
+    protocol: process.env.UPLOAD_HTTP_PROTOCOL || 'http',
+    host: process.env.DOWNLOAD_HOST || 'images.golos.io',
+    port: process.env.UPLOAD_PORT || 3234,
     tarantool: {
-        host: process.env.STEEMIT_TARANTOOL_HOST || 'localhost',
-        port: process.env.STEEMIT_TARANTOOL_PORT || 3301,
-        username: process.env.STEEMIT_TARANTOOL_USERNAME || 'guest',
-        password: process.env.STEEMIT_TARANTOOL_PASSWORD || '',
+        host: process.env.TARANTOOL_HOST || 'localhost',
+        port: process.env.TARANTOOL_PORT || 3301,
+        username: process.env.TARANTOOL_USERNAME || 'guest',
+        password: process.env.TARANTOOL_PASSWORD || '',
     },
-    testKey: toBoolean(process.env.STEEMIT_UPLOAD_TEST_KEY),
+    testKey: toBoolean(process.env.UPLOAD_TEST_KEY),
     uploadIpLimit: {
-        minRep: parseFloat(process.env.STEEMIT_UPLOAD_MIN_REP || 10),
+        minRep: parseFloat(process.env.UPLOAD_MIN_REP || 10),
     },
-
-    uploadBucket: process.env.STEEMIT_IMAGE_BUCKET_UPLOAD || 'steemit-dev-imageproxy-upload',
-    webBucket: process.env.STEEMIT_IMAGEPROXY_BUCKET_WEB || 'steemit-dev-imageproxy-web',
-    thumbnailBucket:
-        process.env.STEEMIT_IMAGEPROXY_BUCKET_THUMBNAIL || 'steemit-dev-imageproxy-thumbnail',
+    uploadBucket: process.env.UPLOAD_PATH || './uploads',
+    webBucket: process.env.IMAGEPROXY_BUCKET_WEB || 'dev-imageproxy-web',
+    thumbnailBucket: process.env.IMAGEPROXY_BUCKET_THUMBNAIL || 'dev-imageproxy-thumbnail',
 };
 
 if (config.testKey) {

@@ -1,6 +1,7 @@
 const router = require('koa-router')();
 const koaBody = require('koa-body');
-const fs = require('fs');
+const fs = require('fs-extra');
+const crypto = require('crypto');
 const fileType = require('file-type');
 const multihash = require('multihashes');
 const base58 = require('bs58');
@@ -21,7 +22,7 @@ const bodyLimits = koaBody({
     // formidable: { uploadDir: '/tmp', }
 });
 
-router.post('/:username/:signature', bodyLimits, function*() {
+router.post('/upload', bodyLimits, function*() {
     // TODO: Temp disable limits
     // const ip = getRemoteIp(this.req);
     //
@@ -35,6 +36,11 @@ router.post('/:username/:signature', bodyLimits, function*() {
 
     const { files, fields } = this.request.body;
 
+    if (!files) {
+        missing(this, {}, 'file');
+        return;
+    }
+
     const fileNames = Object.keys(files);
     const { filename, filebase64 } = fields;
 
@@ -43,100 +49,113 @@ router.post('/:username/:signature', bodyLimits, function*() {
         return;
     }
 
-    const { signature } = this.params;
-    const sig = parseSig(signature);
+    // const { signature } = this.params;
+    // const sig = parseSig(signature);
+    //
+    // if (!sig) {
+    //     this.status = 400;
+    //     this.statusText = `Unable to parse signature (expecting HEX data).`;
+    //     this.body = { error: this.statusText };
+    //     return;
+    // }
 
-    if (!sig) {
-        this.status = 400;
-        this.statusText = `Unable to parse signature (expecting HEX data).`;
-        this.body = { error: this.statusText };
-        return;
-    }
+    // const { username } = this.params;
+    // let posting;
 
-    const { username } = this.params;
-    let posting;
-
-    let fbuffer, fname;
+    let fbuffer;
 
     if (fileNames.length) {
         const file = files[fileNames[0]];
-        fname = file.name;
-        // How can I keep a multipart form upload in memory (skip the file)?
-        // https://github.com/tunnckoCore/koa-better-body/issues/67
-        fbuffer = yield new Promise(resolve => {
-            fs.readFile(file.path, 'binary', (err, data) => {
-                if (err) {
-                    console.error(err);
-                    this.status = 400;
-                    this.statusText = `Upload failed.`;
-                    this.body = { error: this.statusText };
-                    resolve();
-                    return;
-                }
-                fs.unlink(file.path);
-                resolve(new Buffer(data, 'binary'));
-            });
-        });
 
-        if (!fbuffer) {
-            return;
-        }
-    } else {
-        fname = filename ? filename : '';
-        fbuffer = new Buffer(filebase64, 'base64');
-    }
-
-    let mime;
-    const ftype = fileType(fbuffer);
-
-    if (ftype) {
-        mime = ftype.mime;
-        if (!fname || fname === '' || fname === 'blob') {
-            fname = `image.${ftype.ext}`;
-        }
-    }
-
-    if (!/^image\/(gif|jpeg|png)$/.test(mime)) {
-        this.status = 400;
-        this.statusText = 'Please upload only images.';
-        this.body = { error: this.statusText };
-        console.log(`Upload rejected, file: ${fname} mime: ${mime}`);
-        return;
-    }
-
-    // The challenge needs to be prefixed with a constant (both on the server and checked on the client) to make sure the server can't easily make the client sign a transaction doing something else.
-    const prefix = new Buffer('ImageSigningChallenge');
-    const shaVerify = hash.sha256(Buffer.concat([prefix, fbuffer]));
-
-    let userVerified = false;
-    if (posting) {
-        const testKey = config.testKey ? PrivateKey.fromSeed('').toPublicKey() : null;
-
-        if (
-            !sig.verifyHash(shaVerify, posting) &&
-            !(testKey && sig.verifyHash(shaVerify, testKey))
-        ) {
+        try {
+            fbuffer = yield fs.readFile(file.path);
+            yield fs.unlink(file.path);
+        } catch (err) {
+            console.error('Reading file failed:', err);
             this.status = 400;
-            this.statusText = 'Signature did not verify.';
+            this.statusText = 'Upload failed.';
             this.body = { error: this.statusText };
             return;
         }
-        userVerified = true;
     } else {
-        console.log('WARN: Skipped signature verification (steemd connection problem?)');
-    }
-
-    if (userVerified) {
-        // don't affect the quote unless the user is verified
-        const megs = fbuffer.length / (1024 * 1024);
-        if (yield limit(this, 'uploadData', username, 'Upload size', 'megabytes', megs)) {
+        try {
+            fbuffer = new Buffer(filebase64, 'base64');
+        } catch (err) {
+            console.error('Invalid base64:', err);
+            this.status = 400;
+            this.statusText = 'Invalid base64.';
+            this.body = { error: this.statusText };
             return;
         }
     }
 
+    let mime;
+    const fType = fileType(fbuffer);
+
+    if (fType) {
+        mime = fType.mime;
+    }
+
+    if (!/^image\/(?:gif|jpeg|png)$/.test(mime)) {
+        console.log(`Upload rejected, mime: ${mime}`);
+        this.status = 400;
+        this.statusText = 'Please upload only images.';
+        this.body = { error: this.statusText };
+        return;
+    }
+
+    let ext;
+
+    switch (mime) {
+        case 'image/gif':
+            ext = 'gif';
+            break;
+        case 'image/jpeg':
+            ext = 'jpg';
+            break;
+        case 'image/png':
+            ext = 'png';
+            break;
+        default:
+    }
+
+    // The challenge needs to be prefixed with a constant (both on the server and checked on the client) to make sure the server can't easily make the client sign a transaction doing something else.
+    // const prefix = new Buffer('ImageSigningChallenge');
+    // const shaVerify = hash.sha256(Buffer.concat([prefix, fbuffer]));
+    //
+    // let userVerified = false;
+    // if (posting) {
+    //     const testKey = config.testKey ? PrivateKey.fromSeed('').toPublicKey() : null;
+    //
+    //     if (
+    //         !sig.verifyHash(shaVerify, posting) &&
+    //         !(testKey && sig.verifyHash(shaVerify, testKey))
+    //     ) {
+    //         this.status = 400;
+    //         this.statusText = 'Signature did not verify.';
+    //         this.body = { error: this.statusText };
+    //         return;
+    //     }
+    //     userVerified = true;
+    // } else {
+    //     console.log('WARN: Skipped signature verification (steemd connection problem?)');
+    // }
+    //
+    // if (userVerified) {
+    //     // don't affect the quote unless the user is verified
+    //     const megs = fbuffer.length / (1024 * 1024);
+    //     if (yield limit(this, 'uploadData', username, 'Upload size', 'megabytes', megs)) {
+    //         return;
+    //     }
+    // }
+
     // Data hash (D)
-    const sha = hash.sha256(fbuffer);
-    const key = 'D' + base58.encode(multihash.encode(sha, 'sha2-256'));
+    // const sha = hash.sha256(fbuffer);
+    // const key = 'D' + base58.encode(multihash.encode(sha, 'sha2-256'));
+
+    const key = base58.encode(yield randomBytes(32)).substr(0, 32);
+
+    const fileName = `${key}.${ext}`;
 
     if (mime === 'image/jpeg') {
         try {
@@ -162,40 +181,50 @@ router.post('/:username/:signature', bodyLimits, function*() {
                 fbuffer = yield image.toBuffer();
             }
         } catch (err) {
-            console.error('upload-data process image', key, err.message);
+            console.error('upload-data process image', fileName, err.message);
         }
     }
 
-    yield new Promise(resolve => {
-        const fnameUri = encodeURIComponent(fname);
+    try {
+        yield putToStorage(uploadBucket, fileName, fbuffer);
 
-        putToStorage(uploadBucket, key, fbuffer, fnameUri)
-            .then(() => {
-                console.log(`Uploaded '${fname}' to ${uploadBucket}${key}`);
-                const url =
-                    protocol === 'https'
-                        ? `https://${host}/${key}/${fnameUri}`
-                        : `${protocol}://${host}:${port}/${key}/${fnameUri}`;
+        console.log(`Uploaded '${fileName}' to: ${uploadBucket}`);
 
-                this.body = { url };
-                resolve();
-            })
-            .catch(err => {
-                console.log(err);
-                this.status = 400;
-                this.statusText = `Error uploading ${key}.`;
-                this.body = { error: this.statusText };
-                resolve();
-            });
-    });
+        let url;
+
+        if (protocol === 'https') {
+            url = `https://${host}/files/${fileName}`;
+        } else {
+            url = `${protocol}://${host}:${port}/files/${fileName}`;
+        }
+
+        this.body = { url };
+    } catch (err) {
+        console.warn(err);
+        this.status = 400;
+        this.statusText = `Error uploading ${fileName}.`;
+        this.body = { error: this.statusText };
+    }
 });
 
-const parseSig = hexSig => {
-    try {
-        return Signature.fromHex(hexSig);
-    } catch (e) {
-        return null;
-    }
-};
+// function parseSig(hexSig) {
+//     try {
+//         return Signature.fromHex(hexSig);
+//     } catch (e) {
+//         return null;
+//     }
+// }
+
+function randomBytes(size) {
+    return new Promise((resolve, reject) => {
+        crypto.randomBytes(size, (err, buf) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(buf);
+            }
+        });
+    });
+}
 
 module.exports = router.routes();
