@@ -1,5 +1,5 @@
 const TarantoolConnection = require('tarantool-driver');
-const config = require('../config');
+const config = require('../../config');
 
 const { host, port, username, password } = config.tarantool;
 

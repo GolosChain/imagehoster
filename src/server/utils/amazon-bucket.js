@@ -10,7 +10,9 @@ function s3call(method, params) {
             } else if (err) {
                 console.error(method, params, err);
                 reject(err);
-            } else resolve(data);
+            } else {
+                resolve(data);
+            }
         });
     });
 }
@@ -25,7 +27,9 @@ function waitFor(method, params /*, responseHeaders*/) {
             if (err) {
                 console.error(err);
                 reject(err);
-            } else resolve(data);
+            } else {
+                resolve(data);
+            }
         });
     });
 }

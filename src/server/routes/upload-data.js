@@ -4,12 +4,12 @@ const multihash = require('multihashes');
 const base58 = require('bs58');
 const sharp = require('sharp');
 
-const config = require('../config');
+const config = require('../../config');
 // const { hash, Signature, PublicKey, PrivateKey } = require('../../shared/ecc');
-const { repLog10 } = require('./utils');
-const { exif, hasLocation, hasOrientation } = require('./exif-utils');
-const { missing, getRemoteIp, limit } = require('./utils-koa');
-const { putToStorage } = require('./disc-storage');
+const { repLog10 } = require('../utils/utils');
+const { exif, hasLocation, hasOrientation } = require('../utils/exif-utils');
+const { missing, getRemoteIp, limit } = require('../utils/utils-koa');
+const { putToStorage } = require('../utils/disc-storage');
 
 const { protocol, host, port, uploadBucket } = config;
 

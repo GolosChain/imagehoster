@@ -1,8 +1,8 @@
 const router = require('koa-router')();
 
-const config = require('../config');
-const { getFromStorage } = require('./disc-storage');
-const { missing, getRemoteIp, limit } = require('./utils-koa');
+const config = require('../../config');
+const { getFromStorage } = require('../utils/disc-storage');
+const { missing, getRemoteIp, limit } = require('../utils/utils-koa');
 
 router.get('/:hash/:filename?', function*() {
     try {
