@@ -1,22 +1,26 @@
+const router = require('koa-router')();
+
 const config = require('../config');
 const { getFromStorage } = require('./disc-storage');
 const { missing, getRemoteIp, limit } = require('./utils-koa');
 
-const { uploadBucket } = config;
-const router = require('koa-router')();
-
 router.get('/:hash/:filename?', function*() {
     try {
         const ip = getRemoteIp(this.req);
-        if (yield limit(this, 'downloadIp', ip, 'Downloads', 'request')) return;
 
-        if (missing(this, this.params, 'hash')) return;
+        if (yield limit(this, 'downloadIp', ip, 'Downloads', 'request')) {
+            return;
+        }
+
+        if (missing(this, this.params, 'hash')) {
+            return;
+        }
 
         const { hash } = this.params;
         const key = `${hash}`;
 
         yield new Promise(resolve => {
-            getFromStorage(uploadBucket, key)
+            getFromStorage(config.uploadBucket, key)
                 .then(data => {
                     this.body = new Buffer(data.toString('binary'), 'binary');
                     resolve();
@@ -27,7 +31,6 @@ router.get('/:hash/:filename?', function*() {
                     this.statusText = `Error fetching ${key}.`;
                     this.body = { error: this.statusText };
                     resolve();
-                    return;
                 });
         });
     } catch (error) {

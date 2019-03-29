@@ -6,9 +6,9 @@ const config = require('../config');
 console.log('> Applications starting with config:', config);
 
 const healthCheck = require('./health-check');
+const dataServer = require('./data-server');
 const uploadData = require('./upload-data');
 const imageProxy = require('./image-proxy');
-const dataServer = require('./data-server');
 
 const app = new Koa();
 

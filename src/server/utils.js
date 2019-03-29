@@ -10,18 +10,26 @@ function log10(str) {
 }
 
 const repLog10 = rep2 => {
-    if (rep2 == null) return rep2;
+    if (rep2 == null) {
+        return rep2;
+    }
+
     let rep = String(rep2);
     const neg = rep.charAt(0) === '-';
     rep = neg ? rep.substring(1) : rep;
 
     let out = log10(rep);
-    if (isNaN(out)) out = 0;
+
+    if (isNaN(out)) {
+        out = 0;
+    }
+
     out = Math.max(out - 9, 0); // @ -9, $0.50 earned is approx magnitude 1
     out = (neg ? -1 : 1) * out;
     out = out * 9 + 25; // 9 points per magnitude. center at 25
     // base-line 0 to darken and < 0 to auto hide (grep rephide)
     out = parseInt(out);
+
     return out;
 };
 

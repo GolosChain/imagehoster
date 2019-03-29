@@ -9,13 +9,21 @@ let ready_promise;
 const reset = p =>
     p.catch(error => {
         console.error('Tarantool error', error.message);
-        if (error.message.indexOf('connect') >= 0) conn = null;
+
+        if (error.message.indexOf('connect') >= 0) {
+            conn = null;
+        }
+
         throw error;
     });
 
 function init() {
-    if (conn) return ready_promise;
+    if (conn) {
+        return ready_promise;
+    }
+
     conn = new TarantoolConnection({ host, port });
+
     return (ready_promise = new Promise(resolve => {
         resolve(
             conn

@@ -1,3 +1,4 @@
+const router = require('koa-router')();
 const fileType = require('file-type');
 const request = require('request');
 const sharp = require('sharp');
@@ -10,14 +11,16 @@ const { waitFor, s3call, s3 } = require('./amazon-bucket');
 const { uploadBucket, webBucket, thumbnailBucket } = config;
 const TRACE = process.env.STEEMIT_IMAGEPROXY_TRACE || false;
 
-const router = require('koa-router')();
-
 // http://localhost:3234/640x480/https://cdn.meme.am/cache/instances/folder136/400x400/67577136.jpg
 // http://localhost:3234/0x0/https://cdn.meme.am/cache/instances/folder136/400x400/67577136.jpg
 router.get('/:width(\\d+)x:height(\\d+)/:url(.*)', function*() {
-    if (missing(this, this.params, 'width')) return;
-    if (missing(this, this.params, 'height')) return;
-    if (missing(this, this.params, 'url')) return;
+    if (
+        missing(this, this.params, 'width') ||
+        missing(this, this.params, 'height') ||
+        missing(this, this.params, 'url')
+    ) {
+        return;
+    }
 
     // NOTE: can't use req.params.url -- it doesn't include the query string.
     //   Instead, we take the full request URL and trim everything up to the
@@ -77,16 +80,28 @@ router.get('/:width(\\d+)x:height(\\d+)/:url(.*)', function*() {
     const webBucketKey = { Bucket: webBucket, Key };
 
     const resizeRequest = targetWidth !== 0 || targetHeight !== 0;
+
     if (resizeRequest) {
         const resizedKey = Key + `_${targetWidth}x${targetHeight}`;
-        const thumbnailKey = { Bucket: thumbnailBucket, Key: resizedKey };
+
+        const thumbnailKey = {
+            Bucket: thumbnailBucket,
+            Key: resizedKey,
+        };
 
         const hasThumbnail = (yield s3call('headObject', thumbnailKey)) != null;
-        if (TRACE) console.log('image-proxy -> resize has thumbnail', hasThumbnail);
+
+        if (TRACE) {
+            console.log('image-proxy -> resize has thumbnail', hasThumbnail);
+        }
 
         if (hasThumbnail) {
             const params = { Bucket: thumbnailBucket, Key: resizedKey, Expires: 60 };
-            if (TRACE) console.log('image-proxy -> thumbnail redirect');
+
+            if (TRACE) {
+                console.log('image-proxy -> thumbnail redirect');
+            }
+
             const signedUrl = s3.getSignedUrl('getObject', params);
             this.redirect(signedUrl);
             return;
@@ -99,11 +114,13 @@ router.get('/:width(\\d+)x:height(\\d+)/:url(.*)', function*() {
             // Case 1 of 2: re-fetching
             const imageHead = yield fetchHead(this, Bucket, Key, url, webBucketKey);
             if (imageHead && imageHead.ContentType === 'image/gif') {
-                if (TRACE)
+                if (TRACE) {
                     console.log(
                         'image-proxy -> gif redirect (animated gif work-around)',
                         JSON.stringify(imageHead, null, 0)
                     );
+                }
+
                 const signedUrl = s3.getSignedUrl('getObject', imageHead.headKey);
                 this.redirect(signedUrl);
                 return;
@@ -117,18 +134,23 @@ router.get('/:width(\\d+)x:height(\\d+)/:url(.*)', function*() {
             return;
         }
 
-        if (TRACE)
+        if (TRACE) {
             console.log('image-proxy -> original save', url, JSON.stringify(webBucketKey, null, 0));
+        }
+
         yield s3call('putObject', Object.assign({}, webBucketKey, imageResult));
 
         if (fullSize && imageResult.ContentType === 'image/gif') {
             // Case 2 of 2: initial fetch
             yield waitFor('objectExists', webBucketKey);
-            if (TRACE)
+
+            if (TRACE) {
                 console.log(
                     'image-proxy -> new gif redirect (animated gif work-around)',
                     JSON.stringify(webBucketKey, null, 0)
                 );
+            }
+
             const signedUrl = s3.getSignedUrl('getObject', webBucketKey);
             this.redirect(signedUrl);
             return;
@@ -138,16 +160,20 @@ router.get('/:width(\\d+)x:height(\\d+)/:url(.*)', function*() {
             if (TRACE) console.log('image-proxy -> prepare thumbnail');
             const thumbnail = yield prepareThumbnail(imageResult.Body, targetWidth, targetHeight);
 
-            if (TRACE)
+            if (TRACE) {
                 console.log('image-proxy -> thumbnail save', JSON.stringify(thumbnailKey, null, 0));
+            }
+
             yield s3call('putObject', Object.assign({}, thumbnailKey, thumbnail));
             yield waitFor('objectExists', thumbnailKey);
 
-            if (TRACE)
+            if (TRACE) {
                 console.log(
                     'image-proxy -> thumbnail redirect',
                     JSON.stringify(thumbnailKey, null, 0)
                 );
+            }
+
             const signedUrl = s3.getSignedUrl('getObject', thumbnailKey);
             this.redirect(signedUrl);
         } catch (error) {
@@ -157,8 +183,13 @@ router.get('/:width(\\d+)x:height(\\d+)/:url(.*)', function*() {
                 error,
                 error ? error.stack : undefined
             );
+
             yield waitFor('objectExists', webBucketKey);
-            if (TRACE) console.log('image-proxy -> resize error redirect', url);
+
+            if (TRACE) {
+                console.log('image-proxy -> resize error redirect', url);
+            }
+
             const signedUrl = s3.getSignedUrl('getObject', webBucketKey);
             this.redirect(signedUrl);
         }
@@ -169,24 +200,31 @@ router.get('/:width(\\d+)x:height(\\d+)/:url(.*)', function*() {
 
     const hasOriginal = !!(yield s3call('headObject', originalKey));
     if (hasOriginal) {
-        if (TRACE)
+        if (TRACE) {
             console.log('image-proxy -> original redirect', JSON.stringify(originalKey, null, 0));
+        }
         const signedUrl = s3.getSignedUrl('getObject', originalKey);
         this.redirect(signedUrl);
         return;
     }
 
     const imageResult = yield fetchImage(this, Bucket, Key, url, webBucketKey);
+
     if (!imageResult) {
         return;
     }
 
-    if (TRACE) console.log('image-proxy -> original save');
+    if (TRACE) {
+        console.log('image-proxy -> original save');
+    }
+
     yield s3call('putObject', Object.assign({}, webBucketKey, imageResult));
     yield waitFor('objectExists', webBucketKey);
 
-    if (TRACE)
+    if (TRACE) {
         console.log('image-proxy -> original redirect', JSON.stringify(webBucketKey, null, 0));
+    }
+
     const signedUrl = s3.getSignedUrl('getObject', webBucketKey);
     this.redirect(signedUrl);
 });
@@ -194,27 +232,39 @@ router.get('/:width(\\d+)x:height(\\d+)/:url(.*)', function*() {
 function* fetchHead(ctx, Bucket, Key, url, webBucketKey) {
     const headKey = { Bucket, Key };
     let head = yield s3call('headObject', headKey);
+
     if (!head && Bucket === uploadBucket) {
         // The url appeared to be in the Upload bucket but was not,
         // double-check the webbucket to be sure.
         head = yield s3call('headObject', webBucketKey);
-        if (TRACE)
+
+        if (TRACE) {
             console.log(
                 'image-proxy -> fetch image head',
                 !!head,
                 JSON.stringify(webBucketKey, null, 0)
             );
-        if (!head) return null;
+        }
+        if (!head) {
+            return null;
+        }
 
-        return { headKey: webBucketKey, ContentType: head.ContentType };
+        return {
+            headKey: webBucketKey,
+            ContentType: head.ContentType,
+        };
     } else {
-        if (TRACE)
+        if (TRACE) {
             console.log(
                 'image-proxy -> fetch image head',
                 !!head,
                 JSON.stringify(headKey, null, 0)
             );
-        if (!head) return null;
+        }
+
+        if (!head) {
+            return null;
+        }
 
         return { headKey, ContentType: head.ContentType };
     }
@@ -309,10 +359,16 @@ function calculateGeo(origWidth, origHeight, targetWidth, targetHeight) {
     }
 
     // Constrain target dims.
-    if (targetWidth > origWidth) targetWidth = origWidth;
-    if (targetHeight > origHeight) targetHeight = origHeight;
+    if (targetWidth > origWidth) {
+        targetWidth = origWidth;
+    }
+
+    if (targetHeight > origHeight) {
+        targetHeight = origHeight;
+    }
 
     const targetRatio = targetWidth / targetHeight;
+
     if (targetRatio > origRatio) {
         // max out height, and calc a smaller width
         targetWidth = Math.round(targetHeight * origRatio);

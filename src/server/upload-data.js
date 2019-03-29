@@ -49,9 +49,11 @@ router.post('/:username/:signature', koaBody, function*() {
 
     const { username } = this.params;
     let posting;
+
     try {
         // TODO Apis removed
         const [account] = yield Apis.db_api('get_accounts', [this.params.username]);
+
         if (!account) {
             this.status = 400;
             this.statusText = `Account '${this.params.username}' is not found on the blockchain.`;
@@ -65,12 +67,15 @@ router.post('/:username/:signature', koaBody, function*() {
         } = account;
 
         const rep = repLog10(reputation);
+
         if (rep < config.uploadIpLimit.minRep) {
             this.status = 400;
             this.statusText = `Your reputation must be at least ${
                 config.uploadIpLimit.minRep
             } to upload.`;
+
             this.body = { error: this.statusText };
+
             console.log(
                 `Upload by '${username}' blocked: reputation ${rep} < ${
                     config.uploadIpLimit.minRep
@@ -80,6 +85,7 @@ router.post('/:username/:signature', koaBody, function*() {
         }
 
         const [[posting_pubkey, weight]] = key_auths;
+
         if (weight < weight_threshold) {
             this.status = 400;
             this.statusText = `User ${username} has an unsupported posting key configuration.`;
@@ -93,6 +99,7 @@ router.post('/:username/:signature', koaBody, function*() {
     }
 
     let fbuffer, fname;
+
     if (fileNames.length) {
         const file = files[fileNames[0]];
         fname = file.name;
@@ -112,7 +119,10 @@ router.post('/:username/:signature', koaBody, function*() {
                 resolve(new Buffer(data, 'binary'));
             });
         });
-        if (!fbuffer) return;
+
+        if (!fbuffer) {
+            return;
+        }
     } else {
         fname = filename ? filename : '';
         fbuffer = new Buffer(filebase64, 'base64');
@@ -120,6 +130,7 @@ router.post('/:username/:signature', koaBody, function*() {
 
     let mime;
     const ftype = fileType(fbuffer);
+
     if (ftype) {
         mime = ftype.mime;
         if (!fname || fname === '' || fname === 'blob') {
@@ -174,26 +185,32 @@ router.post('/:username/:signature', koaBody, function*() {
             const exifData = yield exif(fbuffer);
             const orientation = hasOrientation(exifData);
             const location = hasLocation(exifData);
+
             if (location || orientation) {
                 const image = sharp(fbuffer);
 
                 // For privacy, remove: GPS Information, Camera Info, etc..
                 // Sharp will remove EXIF info by default unless withMetadata is called..
-                if (!location) image.withMetadata();
+                if (!location) {
+                    image.withMetadata();
+                }
 
                 // Auto-orient based on the EXIF Orientation.  Remove orientation (if any)
-                if (orientation) image.rotate();
+                if (orientation) {
+                    image.rotate();
+                }
 
                 // Verify signature before altering fbuffer
                 fbuffer = yield image.toBuffer();
             }
-        } catch (error) {
-            console.error('upload-data process image', key, error.message);
+        } catch (err) {
+            console.error('upload-data process image', key, err.message);
         }
     }
 
     yield new Promise(resolve => {
         const fnameUri = encodeURIComponent(fname);
+
         putToStorage(uploadBucket, key, fbuffer, fnameUri)
             .then(() => {
                 console.log(`Uploaded '${fname}' to ${uploadBucket}${key}`);

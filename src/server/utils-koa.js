@@ -23,9 +23,18 @@ function getRemoteIp(req) {
 }
 
 function esc(value, max_length = 256) {
-    if (!value) return '';
-    if (typeof value === 'number') return value;
-    if (typeof value !== 'string') return '(object)';
+    if (!value) {
+        return '';
+    }
+
+    if (typeof value === 'number') {
+        return value;
+    }
+
+    if (typeof value !== 'string') {
+        return '(object)';
+    }
+
     const res = value
         .substring(0, max_length - max_length * 0.2)
         .replace(/[\0\x08\x09\x1a\n\r"'\\\%]/g, function(char) {
@@ -51,6 +60,7 @@ function esc(value, max_length = 256) {
             }
             return '-';
         });
+
     return res.length < max_length ? res : '-';
 }
 
@@ -66,7 +76,10 @@ function* limit(ctx, type, key, description, unitLabel, amount = 1) {
             unitLabel,
             amount
         );
-        if (over) throw desc;
+
+        if (over) {
+            throw desc;
+        }
     } catch (error) {
         // console.error(error)
         if (typeof error === 'string') {

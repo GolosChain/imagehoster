@@ -4,6 +4,7 @@ function* exif(buffer) {
     return new Promise((resolve, reject) => {
         try {
             const exifImage = new ExifImage();
+
             exifImage.loadImage(buffer, function(error, data) {
                 if (error) {
                     if (error.code === 'NO_EXIF_SEGMENT') {
@@ -22,6 +23,7 @@ function* exif(buffer) {
 }
 
 const hasOrientation = (d = {}) => d && d.image && d.image.Orientation != null;
+
 const hasLocation = (d = {}) =>
     d && d.gps && Object.keys(d.gps).find(key => /Latitude|Longitude|Altitude/i.test(key)) != null;
 
