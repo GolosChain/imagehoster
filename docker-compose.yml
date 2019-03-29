@@ -14,7 +14,7 @@ services:
   imagehoster:
     image: imagehoster
     build:
-      context: ./imagehoster
+      context: src
     ports:
       - '80'
     environment:

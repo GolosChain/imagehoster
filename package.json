@@ -4,8 +4,8 @@
   "description": "",
   "main": "upload-data.js",
   "scripts": {
-    "start": "node app/server/server.js ",
-    "test": "eslint app"
+    "start": "node src/app/server/server.js ",
+    "test": "eslint src/app"
   },
   "author": "",
   "license": "MIT",
