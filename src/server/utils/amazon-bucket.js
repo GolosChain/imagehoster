@@ -1,4 +1,4 @@
-const AWS = require('aws-sdk/index');
+const AWS = require('aws-sdk');
 
 const s3 = new AWS.S3();
 
