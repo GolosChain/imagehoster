@@ -4,6 +4,7 @@ const config = {
     host: process.env.DOWNLOAD_HOST || 'images.golos.io',
     port: process.env.UPLOAD_PORT || 3234,
     uploadDir: process.env.UPLOAD_PATH || './uploads',
+    cacheDir: process.env.CACHE_PATH || './cache',
 };
 
 module.exports = config;

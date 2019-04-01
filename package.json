@@ -4,7 +4,8 @@
   "description": "",
   "main": "src/server/index.js",
   "scripts": {
-    "start": "node src/server/index.js ",
+    "start": "node src/server/index.js",
+    "dev": "nodemon -w src node src/server/index.js",
     "test": "eslint src/app"
   },
   "author": "",
@@ -18,9 +19,14 @@
     "koa-body": "^1.5.0",
     "koa-cors": "0.0.16",
     "koa-router": "^5.4.0",
+    "mongodb": "^3.2.2",
+    "mongoose": "^5.4.20",
+    "request": "^2.88.0",
+    "request-promise-native": "^1.0.7",
     "sharp": "^0.17.1"
   },
   "devDependencies": {
-    "eslint": "^5.16.0"
+    "eslint": "^5.16.0",
+    "nodemon": "^1.18.10"
   }
 }

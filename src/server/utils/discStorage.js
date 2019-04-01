@@ -1,7 +1,11 @@
 const fs = require('fs-extra');
 const path = require('path');
+const crypto = require('crypto');
+const base58 = require('bs58');
 
-async function saveToStorage(dir, filename, buffer) {
+const { uploadDir } = require('../../config');
+
+async function saveTo(dir, filename, buffer) {
     const { subDir, subInnerDir, fullPath } = formatFullPath(dir, filename);
 
     if (!(await fs.exists(subDir))) {
@@ -23,7 +27,7 @@ async function saveToStorage(dir, filename, buffer) {
     await fs.rename(tmpFileName, fullPath);
 }
 
-async function getFromStorage(dir, filename) {
+async function getFrom(dir, filename) {
     const { fullPath } = formatFullPath(dir, filename);
 
     return fs.readFile(fullPath);
@@ -42,7 +46,41 @@ function formatFullPath(dir, filename) {
     };
 }
 
+function saveToStorage(fileId, buffer) {
+    return saveTo(uploadDir, fileId, buffer);
+}
+
+function getFromStorage(fileId) {
+    return getFrom(uploadDir, fileId);
+}
+
+async function saveToCache(buffer) {
+    const fileId = await getRandomFileId();
+
+    await saveTo(uploadDir, fileId, buffer);
+
+    return fileId;
+}
+
+function getFromCache(fileId) {
+    return getFrom(uploadDir, fileId);
+}
+
+function getRandomFileId() {
+    return new Promise((resolve, reject) => {
+        crypto.randomBytes(32, (err, buffer) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(base58.encode(buffer));
+            }
+        });
+    });
+}
+
 module.exports = {
     saveToStorage,
     getFromStorage,
+    saveToCache,
+    getFromCache,
 };
