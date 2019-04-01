@@ -159,7 +159,7 @@ async function checkResizedCache(ctx, { fileId, width, height }) {
 async function process(ctx, { fileId, width, height, buffer }) {
     try {
         const resizedCache = await sharp(buffer)
-            .resize(width, height, { fit: 'inside' })
+            .resize(width, height, { fit: 'cover', withoutEnlargement: true })
             .toBuffer();
 
         ctx.body = resizedCache;

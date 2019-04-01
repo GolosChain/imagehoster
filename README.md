@@ -6,10 +6,14 @@ npm start
 ```
 
 ## Envs:
-`UPLOAD_HTTP_PROTOCOL` default: `'http'`
+`DOMAIN_NAME` default: `localhost`
 
-`DOWNLOAD_HOST` default: `'images.golos.io'`
+`HOST_PORT` default: `3234`
 
-`UPLOAD_PORT` default: `3234`
+`PROTOCOL` default: `http`
 
-`UPLOAD_PATH` default: `'./uploads'`
+`UPLOAD_PATH` default: `./uploads`
+
+`RESIZED_PATH` default: `./resized`
+
+`MONGO_CONNECT` default: `mongodb://localhost/imagehoster`
