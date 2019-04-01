@@ -3,18 +3,16 @@ const koaBody = require('koa-body');
 const fs = require('fs-extra');
 const crypto = require('crypto');
 const fileType = require('file-type');
-const multihash = require('multihashes');
 const base58 = require('bs58');
 const sharp = require('sharp');
 
 const config = require('../../config');
 // const { hash, Signature, PublicKey, PrivateKey } = require('../../shared/ecc');
-const { repLog10 } = require('../utils/utils');
-const { exif, hasLocation, hasOrientation } = require('../utils/exif-utils');
-const { missing, getRemoteIp, limit } = require('../utils/utils');
-const { putToStorage } = require('../utils/disc-storage');
+const { exif, hasLocation, hasOrientation } = require('../utils/exifUtils');
+const { missing } = require('../utils/validation');
+const { saveToStorage } = require('../utils/discStorage');
 
-const { protocol, host, port, uploadBucket } = config;
+const { protocol, host, port, uploadDir } = config;
 
 const bodyLimits = koaBody({
     multipart: true,
@@ -62,13 +60,13 @@ router.post('/upload', bodyLimits, function*() {
     // const { username } = this.params;
     // let posting;
 
-    let fbuffer;
+    let buffer;
 
     if (fileNames.length) {
         const file = files[fileNames[0]];
 
         try {
-            fbuffer = yield fs.readFile(file.path);
+            buffer = yield fs.readFile(file.path);
             yield fs.unlink(file.path);
         } catch (err) {
             console.error('Reading file failed:', err);
@@ -79,7 +77,7 @@ router.post('/upload', bodyLimits, function*() {
         }
     } else {
         try {
-            fbuffer = new Buffer(filebase64, 'base64');
+            buffer = new Buffer(filebase64, 'base64');
         } catch (err) {
             console.error('Invalid base64:', err);
             this.status = 400;
@@ -89,39 +87,36 @@ router.post('/upload', bodyLimits, function*() {
         }
     }
 
-    let mime;
-    const fType = fileType(fbuffer);
+    const fType = fileType(buffer);
+
+    let extension;
 
     if (fType) {
-        mime = fType.mime;
+        switch (fType.mime) {
+            case 'image/gif':
+                extension = 'gif';
+                break;
+            case 'image/jpeg':
+                extension = 'jpg';
+                break;
+            case 'image/png':
+                extension = 'png';
+                break;
+            default:
+        }
     }
 
-    if (!/^image\/(?:gif|jpeg|png)$/.test(mime)) {
-        console.log(`Upload rejected, mime: ${mime}`);
+    if (!extension) {
+        console.warn('Upload rejected, fileType:', fType);
         this.status = 400;
         this.statusText = 'Please upload only images.';
         this.body = { error: this.statusText };
         return;
     }
 
-    let ext;
-
-    switch (mime) {
-        case 'image/gif':
-            ext = 'gif';
-            break;
-        case 'image/jpeg':
-            ext = 'jpg';
-            break;
-        case 'image/png':
-            ext = 'png';
-            break;
-        default:
-    }
-
     // The challenge needs to be prefixed with a constant (both on the server and checked on the client) to make sure the server can't easily make the client sign a transaction doing something else.
     // const prefix = new Buffer('ImageSigningChallenge');
-    // const shaVerify = hash.sha256(Buffer.concat([prefix, fbuffer]));
+    // const shaVerify = hash.sha256(Buffer.concat([prefix, buffer]));
     //
     // let userVerified = false;
     // if (posting) {
@@ -143,28 +138,29 @@ router.post('/upload', bodyLimits, function*() {
     //
     // if (userVerified) {
     //     // don't affect the quote unless the user is verified
-    //     const megs = fbuffer.length / (1024 * 1024);
+    //     const megs = buffer.length / (1024 * 1024);
     //     if (yield limit(this, 'uploadData', username, 'Upload size', 'megabytes', megs)) {
     //         return;
     //     }
     // }
 
-    // Data hash (D)
-    // const sha = hash.sha256(fbuffer);
-    // const key = 'D' + base58.encode(multihash.encode(sha, 'sha2-256'));
+    const shaSum = crypto.createHash('sha1');
 
-    const key = base58.encode(yield randomBytes(32)).substr(0, 32);
+    shaSum.update(buffer);
 
-    const fileName = `${key}.${ext}`;
+    const sum = shaSum.digest();
+    const key = base58.encode(sum);
 
-    if (mime === 'image/jpeg') {
+    const fileName = `${key}.${extension}`;
+
+    if (fType.mime === 'image/jpeg') {
         try {
-            const exifData = yield exif(fbuffer);
+            const exifData = yield exif(buffer);
             const orientation = hasOrientation(exifData);
             const location = hasLocation(exifData);
 
             if (location || orientation) {
-                const image = sharp(fbuffer);
+                const image = sharp(buffer);
 
                 // For privacy, remove: GPS Information, Camera Info, etc..
                 // Sharp will remove EXIF info by default unless withMetadata is called..
@@ -177,8 +173,8 @@ router.post('/upload', bodyLimits, function*() {
                     image.rotate();
                 }
 
-                // Verify signature before altering fbuffer
-                fbuffer = yield image.toBuffer();
+                // Verify signature before altering buffer
+                buffer = yield image.toBuffer();
             }
         } catch (err) {
             console.error('upload-data process image', fileName, err.message);
@@ -186,23 +182,22 @@ router.post('/upload', bodyLimits, function*() {
     }
 
     try {
-        yield putToStorage(uploadBucket, fileName, fbuffer);
+        yield saveToStorage(uploadDir, fileName, buffer);
 
-        console.log(`Uploaded '${fileName}' to: ${uploadBucket}`);
-
+        const filePath = `files/${fileName}`;
         let url;
 
         if (protocol === 'https') {
-            url = `https://${host}/files/${fileName}`;
+            url = `https://${host}/${filePath}`;
         } else {
-            url = `${protocol}://${host}:${port}/files/${fileName}`;
+            url = `${protocol}://${host}:${port}/${filePath}`;
         }
 
         this.body = { url };
     } catch (err) {
         console.warn(err);
         this.status = 400;
-        this.statusText = `Error uploading ${fileName}.`;
+        this.statusText = `Error uploading ${fileName}`;
         this.body = { error: this.statusText };
     }
 });
@@ -214,17 +209,5 @@ router.post('/upload', bodyLimits, function*() {
 //         return null;
 //     }
 // }
-
-function randomBytes(size) {
-    return new Promise((resolve, reject) => {
-        crypto.randomBytes(size, (err, buf) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(buf);
-            }
-        });
-    });
-}
 
 module.exports = router.routes();

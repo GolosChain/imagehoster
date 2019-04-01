@@ -1,7 +1,7 @@
 const fs = require('fs-extra');
 const path = require('path');
 
-async function putToStorage(dir, filename, buffer) {
+async function saveToStorage(dir, filename, buffer) {
     const { subDir, subInnerDir, fullPath } = formatFullPath(dir, filename);
 
     if (!(await fs.exists(subDir))) {
@@ -13,10 +13,14 @@ async function putToStorage(dir, filename, buffer) {
     }
 
     if (await fs.exists(fullPath)) {
-        throw new Error('Filename collision');
+        console.log('Duplicate registered');
+        return;
     }
 
-    await fs.writeFile(fullPath, buffer);
+    const tmpFileName = fullPath + '.tmp';
+
+    await fs.writeFile(tmpFileName, buffer);
+    await fs.rename(tmpFileName, fullPath);
 }
 
 async function getFromStorage(dir, filename) {
@@ -39,6 +43,6 @@ function formatFullPath(dir, filename) {
 }
 
 module.exports = {
-    putToStorage,
+    saveToStorage,
     getFromStorage,
 };

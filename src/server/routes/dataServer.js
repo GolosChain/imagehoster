@@ -1,8 +1,8 @@
 const router = require('koa-router')();
 
 const config = require('../../config');
-const { getFromStorage } = require('../utils/disc-storage');
-const { missing, getRemoteIp, limit } = require('../utils/utils');
+const { getFromStorage } = require('../utils/discStorage');
+const { missing } = require('../utils/validation');
 
 router.get('/files/:filename', function*() {
     try {
@@ -19,10 +19,17 @@ router.get('/files/:filename', function*() {
         const { filename } = this.params;
 
         try {
-            this.body = yield getFromStorage(config.uploadBucket, filename);
+            this.body = yield getFromStorage(config.uploadDir, filename);
         } catch (err) {
-            console.log(err);
-            this.status = 400;
+            if (err.code === 'ENOENT') {
+                this.status = 404;
+                this.statusText = `File not found`;
+                this.body = { error: this.statusText };
+                return;
+            }
+
+            console.error('Open file failed:', err);
+            this.status = 500;
             this.statusText = `Error fetching ${filename}`;
             this.body = { error: this.statusText };
         }
