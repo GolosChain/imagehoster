@@ -12,7 +12,7 @@ router.get(
     '/images/:width(\\d+)x:height(\\d+)/:fileId',
     asyncWrapper(async function(ctx) {
         const width = Number(ctx.params.width);
-        const height = Number(ctx.params.width);
+        const height = Number(ctx.params.height);
         const fileId = ctx.params.fileId;
         let buffer;
 
@@ -28,6 +28,7 @@ router.get(
                 return;
             }
 
+            console.error('File loading failed:', err);
             internalError(ctx);
             return;
         }
@@ -158,7 +159,7 @@ async function checkResizedCache(ctx, { fileId, width, height }) {
 async function process(ctx, { fileId, width, height, buffer }) {
     try {
         const resizedCache = await sharp(buffer)
-            .resize(width, height)
+            .resize(width, height, { fit: 'inside' })
             .toBuffer();
 
         ctx.body = resizedCache;
@@ -178,7 +179,8 @@ async function process(ctx, { fileId, width, height, buffer }) {
                 console.warn('Cache saving failed:', err);
             }
         }, 0);
-    } catch {
+    } catch (err) {
+        console.error('Something went wrong:', err);
         internalError(ctx);
     }
 }

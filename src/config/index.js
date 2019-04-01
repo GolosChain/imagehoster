@@ -4,8 +4,8 @@ const config = {
     port: process.env.HOST_PORT || 3234,
     protocol: process.env.PROTOCOL || 'http',
     uploadDir: process.env.UPLOAD_PATH || './uploads',
-    cacheDir: process.env.CACHE_PATH || './cache',
-    mongoDbConnect: process.env.MONGO_CONNECT || 'localhost:27017/imagehoster',
+    resizedDir: process.env.RESIZED_PATH || './resized',
+    mongoDbConnect: process.env.MONGO_CONNECT || 'mongodb://localhost:27017/imagehoster',
 };
 
 module.exports = config;

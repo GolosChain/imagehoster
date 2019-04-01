@@ -3,7 +3,7 @@ const path = require('path');
 const crypto = require('crypto');
 const base58 = require('bs58');
 
-const { uploadDir, cacheDir } = require('../../config');
+const { uploadDir, resizedDir } = require('../../config');
 
 async function saveTo(dir, filename, buffer) {
     const { subDir, subInnerDir, fullPath } = formatFullPath(dir, filename);
@@ -57,17 +57,17 @@ function getFromStorage(fileId) {
 async function saveToCache(buffer) {
     const fileId = await getRandomFileId();
 
-    await saveTo(cacheDir, fileId, buffer);
+    await saveTo(resizedDir, fileId, buffer);
 
     return fileId;
 }
 
 function getFromCache(filename) {
-    return getFrom(cacheDir, filename);
+    return getFrom(resizedDir, filename);
 }
 
 async function removeFromCache(filename) {
-    const { fullPath } = formatFullPath(cacheDir, filename);
+    const { fullPath } = formatFullPath(resizedDir, filename);
     await fs.unlink(fullPath);
 }
 

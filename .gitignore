@@ -1,10 +1,6 @@
 .idea
-script-compiled.js
+.env
 node_modules
 npm-debug.log
-bundle.js
-env_dev.sh
-env_prod.sh
 uploads
-cache
-.env
+resized
