@@ -1,10 +1,11 @@
 const config = {
     // When protocol === 'https' a default port url is used (ignores UPLOAD_PORT)
-    protocol: process.env.UPLOAD_HTTP_PROTOCOL || 'http',
-    host: process.env.DOWNLOAD_HOST || 'images.golos.io',
-    port: process.env.UPLOAD_PORT || 3234,
+    host: process.env.DOMAIN_NAME || 'localhost',
+    port: process.env.HOST_PORT || 3234,
+    protocol: process.env.PROTOCOL || 'http',
     uploadDir: process.env.UPLOAD_PATH || './uploads',
     cacheDir: process.env.CACHE_PATH || './cache',
+    mongoDbConnect: process.env.MONGO_CONNECT || 'localhost:27017/imagehoster',
 };
 
 module.exports = config;

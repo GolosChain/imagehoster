@@ -6,6 +6,7 @@ module.exports = makeModel(
         originalFileId: String,
         fileId: String,
         dimensions: String,
+        cleaning: Boolean,
         timestamp: Date,
     },
     {
@@ -14,22 +15,17 @@ module.exports = makeModel(
                 fields: {
                     originalFileId: 1,
                 },
-                options: {
-                    unique: true,
-                },
             },
             {
                 fields: {
                     originalFileId: 1,
                     dimensions: 1,
                 },
-                options: {
-                    unique: true,
-                },
             },
             {
                 fields: {
                     timestamp: 1,
+                    cleaning: 1,
                 },
             },
         ],

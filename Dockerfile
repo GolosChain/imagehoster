@@ -1,12 +1,10 @@
-FROM node:6
+FROM node:10
 
-WORKDIR /usr/src/app
-
+ENV IN_DOCKER=1
+WORKDIR /app
 COPY package.json .
-RUN npm install
-
+RUN npm install --only=production
 COPY src src
-
 EXPOSE 80
 
 CMD ["npm", "start"]

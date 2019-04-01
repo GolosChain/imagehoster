@@ -22,7 +22,9 @@ app.use(dataServer);
 app.use(uploadData);
 app.use(imageProxy);
 
-app.listen(config.port);
-console.log(`> Application started on port ${config.port}`);
+const port = process.env.IN_DOCKER ? 80 : config.port;
+
+app.listen(port);
+console.log(`> Application started on port ${port}`);
 
 startIntervalCleaning();

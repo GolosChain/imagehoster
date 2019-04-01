@@ -6,124 +6,146 @@ const request = require('request-promise-native');
 const { ExternalImage, ResizedCache } = require('../db');
 const { getFromStorage, saveToCache, getFromCache } = require('../utils/discStorage');
 const { processAndSave } = require('../utils/uploading');
+const { asyncWrapper } = require('../utils/koa');
 
-router.get('/images/:width(\\d+)x:height(\\d+)/:fileId', function*() {
-    const width = Number(this.params.width);
-    const height = Number(this.params.width);
-    const fileId = this.params.fileId;
-    let buffer;
+router.get(
+    '/images/:width(\\d+)x:height(\\d+)/:fileId',
+    asyncWrapper(async function(ctx) {
+        const width = Number(ctx.params.width);
+        const height = Number(ctx.params.width);
+        const fileId = ctx.params.fileId;
+        let buffer;
 
-    if (yield checkResizedCache(this, { fileId, width, height })) {
-        return;
-    }
-
-    try {
-        buffer = yield getFromStorage(fileId);
-    } catch (err) {
-        if (err.code === 'ENOENT') {
-            notFoundError(this);
+        if (await checkResizedCache(ctx, { fileId, width, height })) {
             return;
         }
 
-        internalError(this);
-        return;
-    }
+        try {
+            buffer = await getFromStorage(fileId);
+        } catch (err) {
+            if (err.code === 'ENOENT') {
+                notFoundError(ctx);
+                return;
+            }
 
-    yield process(this, {
-        fileId,
-        width,
-        height,
-        buffer,
-    });
-});
-
-router.get('/proxy/:width(\\d+)x:height(\\d+)/:url(.*)', function*() {
-    const width = Number(this.params.width);
-    const height = Number(this.params.width);
-
-    const url = decodeURIComponent(this.request.originalUrl.match(/^\/proxy\/\d+x\d+\/(.+)$/)[1]);
-
-    const urlInfo = urlParser.parse(url);
-
-    let buffer;
-    let fileId;
-
-    if (urlInfo.protocol === 'https:' && urlInfo.host === 'images.golos.io') {
-        const match = urlInfo.path.match(/^\/images\/([A-Za-z0-9]+\.(?:jpg|gif|png))$/);
-
-        if (match) {
-            fileId = match[1];
-
-            // checkCache
-
-            buffer = yield getFromStorage(fileId);
+            internalError(ctx);
+            return;
         }
-    }
 
-    if (!buffer) {
-        const externalImage = yield ExternalImage.findOne(
-            {
-                url,
-            },
-            'fileId'
+        await process(ctx, {
+            fileId,
+            width,
+            height,
+            buffer,
+        });
+    })
+);
+
+router.get(
+    '/proxy/:width(\\d+)x:height(\\d+)/:url(.*)',
+    asyncWrapper(async function(ctx) {
+        const width = Number(ctx.params.width);
+        const height = Number(ctx.params.width);
+
+        const url = decodeURIComponent(
+            ctx.request.originalUrl.match(/^\/proxy\/\d+x\d+\/(.+)$/)[1]
         );
 
-        if (externalImage) {
-            try {
-                buffer = yield getFromStorage(externalImage.fileId);
-            } catch (err) {
-                console.warn('File not found in cache:', err);
+        const urlInfo = urlParser.parse(url);
+
+        if (!urlInfo.hostname) {
+            ctx.status = 400;
+            ctx.statusText = 'Invalid url';
+            ctx.body = { error: ctx.statusText };
+            return;
+        }
+
+        let buffer;
+        let fileId;
+
+        if (urlInfo.protocol === 'https:' && urlInfo.host === 'images.golos.io') {
+            const match = urlInfo.path.match(/^\/images\/([A-Za-z0-9]+\.(?:jpg|gif|png))$/);
+
+            if (match) {
+                fileId = match[1];
+
+                if (await checkResizedCache(ctx, { fileId, width, height })) {
+                    return;
+                }
+
+                buffer = await getFromStorage(fileId);
             }
         }
 
         if (!buffer) {
-            try {
-                buffer = yield request({
+            const externalImage = await ExternalImage.findOne(
+                {
                     url,
-                    gzip: true,
-                    encoding: null,
-                    headers: {
-                        'user-agent':
-                            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.86 Safari/537.36',
-                    },
-                });
+                },
+                'fileId'
+            );
+
+            if (externalImage) {
+                fileId = externalImage.fileId;
+
+                if (await checkResizedCache(ctx, { fileId, width, height })) {
+                    return;
+                }
 
                 try {
-                    const data = yield processAndSave(buffer);
-                    buffer = data.buffer;
+                    buffer = await getFromStorage(externalImage.fileId);
+                } catch (err) {
+                    console.warn('File not found in cache:', err);
+                }
+            }
 
-                    yield new ExternalImage({
+            if (!buffer) {
+                try {
+                    buffer = await request({
                         url,
-                        fileId: data.fileId,
-                    }).save();
-                } catch (err) {}
-            } catch (err) {
-                console.warn('Request failed:', err);
+                        gzip: true,
+                        encoding: null,
+                        headers: {
+                            'user-agent':
+                                'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.86 Safari/537.36',
+                        },
+                    });
+
+                    try {
+                        const data = await processAndSave(buffer);
+                        fileId = data.fileId;
+                        buffer = data.buffer;
+
+                        await new ExternalImage({
+                            url,
+                            fileId: data.fileId,
+                        }).save();
+                    } catch (err) {}
+                } catch (err) {
+                    console.warn('Request failed:', err);
+                }
             }
         }
-    }
 
-    if (!buffer) {
-        notFoundError(this);
-        return;
-    }
+        if (!buffer) {
+            notFoundError(ctx);
+            return;
+        }
 
-    if (yield checkResizedCache(this, { fileId, width, height })) {
-        return;
-    }
+        await process(ctx, { fileId, width, height, buffer });
+    })
+);
 
-    yield process(this, { width, height, buffer });
-});
-
-function* checkResizedCache(ctx, { fileId, width, height }) {
+async function checkResizedCache(ctx, { fileId, width, height }) {
     try {
-        const resized = yield ResizedCache.findOne({
+        const resized = await ResizedCache.findOne({
             originalFileId: fileId,
             dimensions: `${width}x${height}`,
+            cleaning: false,
         });
 
         if (resized) {
-            ctx.body = yield getFromCache(resized.fileId);
+            ctx.body = await getFromCache(resized.fileId);
             return true;
         }
     } catch (err) {
@@ -133,9 +155,9 @@ function* checkResizedCache(ctx, { fileId, width, height }) {
     return false;
 }
 
-function* process(ctx, { fileId, width, height, buffer }) {
+async function process(ctx, { fileId, width, height, buffer }) {
     try {
-        const resizedCache = yield sharp(buffer)
+        const resizedCache = await sharp(buffer)
             .resize(width, height)
             .toBuffer();
 
@@ -149,6 +171,7 @@ function* process(ctx, { fileId, width, height, buffer }) {
                     originalFileId: fileId,
                     fileId: cacheFileId,
                     dimensions: `${width}x${height}`,
+                    cleaning: false,
                     timestamp: new Date(),
                 }).save();
             } catch (err) {

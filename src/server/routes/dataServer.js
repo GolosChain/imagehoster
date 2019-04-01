@@ -1,38 +1,41 @@
 const router = require('koa-router')();
 
-const config = require('../../config');
 const { getFromStorage } = require('../utils/discStorage');
 const { missing } = require('../utils/validation');
+const { asyncWrapper } = require('../utils/koa');
 
-router.get('/images/:filename', function*() {
-    try {
-        if (missing(this, this.params, 'filename')) {
-            return;
-        }
-
-        const { filename } = this.params;
-
+router.get(
+    '/images/:filename',
+    asyncWrapper(async function(ctx) {
         try {
-            this.body = yield getFromStorage(filename);
-        } catch (err) {
-            if (err.code === 'ENOENT') {
-                this.status = 404;
-                this.statusText = 'File not found';
-                this.body = { error: this.statusText };
+            if (missing(ctx, ctx.params, 'filename')) {
                 return;
             }
 
-            console.error('Open file failed:', err);
-            this.status = 500;
-            this.statusText = `Error fetching ${filename}`;
-            this.body = { error: this.statusText };
+            const { filename } = ctx.params;
+
+            try {
+                ctx.body = await getFromStorage(filename);
+            } catch (err) {
+                if (err.code === 'ENOENT') {
+                    ctx.status = 404;
+                    ctx.statusText = 'File not found';
+                    ctx.body = { error: ctx.statusText };
+                    return;
+                }
+
+                console.error('Open file failed:', err);
+                ctx.status = 500;
+                ctx.statusText = `Error fetching ${filename}`;
+                ctx.body = { error: ctx.statusText };
+            }
+        } catch (err) {
+            console.error(err);
+            ctx.status = 500;
+            ctx.statusText = 'Internal server error';
+            ctx.body = { error: ctx.statusText };
         }
-    } catch (err) {
-        console.error(err);
-        this.status = 500;
-        this.statusText = 'Internal server error';
-        this.body = { error: this.statusText };
-    }
-});
+    })
+);
 
 module.exports = router.routes();
