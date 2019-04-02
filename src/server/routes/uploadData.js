@@ -10,7 +10,6 @@ const { asyncWrapper } = require('../utils/koa');
 const bodyLimits = koaBody({
     multipart: true,
     formLimit: 20 * 1000 * 1024,
-    // formidable: { uploadDir: '/tmp', }
 });
 
 router.post(

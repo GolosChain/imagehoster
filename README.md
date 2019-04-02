@@ -12,8 +12,6 @@ npm start
 
 `PROTOCOL` default: `http`
 
-`UPLOAD_PATH` default: `./uploads`
-
-`RESIZED_PATH` default: `./resized`
+`STORAGE_PATH` default: `./files`
 
 `MONGO_CONNECT` default: `mongodb://localhost/imagehoster`

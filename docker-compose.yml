@@ -14,19 +14,17 @@ services:
     env_file:
       - .env
     volumes:
-      - uploads_vol:/data/uploads
-      - cache_vol:/data/cache
+      - files_vol:/data/files
 
   mongo:
     container_name: imagehoster_mongo
     image: mongo:4
     restart: always
-    # ports:
-    #   - 27017:27017
+    ports:
+      - $MONGO_EXTRERNAL_PORT:27017
     volumes:
       - mongodb_vol:/data/db
 
 volumes:
-  uploads_vol:
-  cache_vol:
+  files_vol:
   mongodb_vol:

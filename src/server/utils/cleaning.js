@@ -1,3 +1,7 @@
+/**
+ * File currently not used.
+ */
+
 const { ResizedCache } = require('../db');
 const { removeFromCache } = require('../utils/discStorage');
 

@@ -3,8 +3,8 @@ const sharp = require('sharp');
 const urlParser = require('url');
 const request = require('request-promise-native');
 
-const { ExternalImage, ResizedCache } = require('../db');
-const { getFromStorage, saveToCache, getFromCache } = require('../utils/discStorage');
+const { ExternalImage } = require('../db');
+const { getFromStorage, saveToStorage } = require('../utils/discStorage');
 const { processAndSave } = require('../utils/uploading');
 const { asyncWrapper } = require('../utils/koa');
 
@@ -46,7 +46,7 @@ router.get(
     '/proxy/:width(\\d+)x:height(\\d+)/:url(.*)',
     asyncWrapper(async function(ctx) {
         const width = Number(ctx.params.width);
-        const height = Number(ctx.params.width);
+        const height = Number(ctx.params.height);
 
         const url = decodeURIComponent(
             ctx.request.originalUrl.match(/^\/proxy\/\d+x\d+\/(.+)$/)[1]
@@ -94,7 +94,7 @@ router.get(
                 }
 
                 try {
-                    buffer = await getFromStorage(externalImage.fileId);
+                    buffer = await getFromStorage(fileId);
                 } catch (err) {
                     console.warn('File not found in cache:', err);
                 }
@@ -139,18 +139,14 @@ router.get(
 
 async function checkResizedCache(ctx, { fileId, width, height }) {
     try {
-        const resized = await ResizedCache.findOne({
-            originalFileId: fileId,
-            dimensions: `${width}x${height}`,
-            cleaning: false,
-        });
-
-        if (resized) {
-            ctx.body = await getFromCache(resized.fileId);
-            return true;
-        }
+        const resizedFileId = makeResizedFileId(fileId, { width, height });
+        const buffer = await getFromStorage(resizedFileId);
+        ctx.body = buffer;
+        return true;
     } catch (err) {
-        console.warn('Resized cache reading failed:', err);
+        if (err.code !== 'ENOENT') {
+            console.warn('Resized cache reading failed:', err);
+        }
     }
 
     return false;
@@ -166,15 +162,9 @@ async function process(ctx, { fileId, width, height, buffer }) {
 
         setTimeout(async () => {
             try {
-                const cacheFileId = await saveToCache(resizedCache);
+                const resizedFileId = makeResizedFileId(fileId, { width, height });
 
-                await new ResizedCache({
-                    originalFileId: fileId,
-                    fileId: cacheFileId,
-                    dimensions: `${width}x${height}`,
-                    cleaning: false,
-                    timestamp: new Date(),
-                }).save();
+                await saveToStorage(resizedFileId, resizedCache);
             } catch (err) {
                 console.warn('Cache saving failed:', err);
             }
@@ -195,6 +185,10 @@ function internalError(ctx) {
     ctx.status = 500;
     ctx.statusText = 'Something went wrong';
     ctx.body = { error: ctx.statusText };
+}
+
+function makeResizedFileId(fileId, { width, height }) {
+    return fileId.replace('.', `_${width}x${height}.`);
 }
 
 module.exports = router.routes();

@@ -1,9 +1,7 @@
 const fs = require('fs-extra');
 const path = require('path');
-const crypto = require('crypto');
-const base58 = require('bs58');
 
-const { uploadDir, resizedDir } = require('../../config');
+const { filesPath } = require('../../config');
 
 async function saveTo(dir, filename, buffer) {
     const { subDir, subInnerDir, fullPath } = formatFullPath(dir, filename);
@@ -47,46 +45,26 @@ function formatFullPath(dir, filename) {
 }
 
 function saveToStorage(fileId, buffer) {
-    return saveTo(uploadDir, fileId, buffer);
+    return saveTo(filesPath, fileId, buffer);
 }
 
 function getFromStorage(fileId) {
-    return getFrom(uploadDir, fileId);
+    return getFrom(filesPath, fileId);
 }
 
-async function saveToCache(buffer) {
-    const fileId = await getRandomFileId();
-
-    await saveTo(resizedDir, fileId, buffer);
-
-    return fileId;
-}
-
-function getFromCache(filename) {
-    return getFrom(resizedDir, filename);
-}
-
-async function removeFromCache(filename) {
-    const { fullPath } = formatFullPath(resizedDir, filename);
-    await fs.unlink(fullPath);
-}
-
-function getRandomFileId() {
-    return new Promise((resolve, reject) => {
-        crypto.randomBytes(20, (err, buffer) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(base58.encode(buffer));
-            }
-        });
-    });
-}
+// function getRandomFileId() {
+//     return new Promise((resolve, reject) => {
+//         crypto.randomBytes(20, (err, buffer) => {
+//             if (err) {
+//                 reject(err);
+//             } else {
+//                 resolve(base58.encode(buffer));
+//             }
+//         });
+//     });
+// }
 
 module.exports = {
     saveToStorage,
     getFromStorage,
-    saveToCache,
-    getFromCache,
-    removeFromCache,
 };
